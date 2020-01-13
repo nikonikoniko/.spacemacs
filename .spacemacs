@@ -2,8 +2,19 @@
 ;; This file is loaded by Spacemacs at startup.
 ;; It must be stored in your home directory.
 
-(add-hook 'vue-mode-hook 'flycheck-mode)
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
+(add-hook 'evil-normal-state-entry-hook (lambda () (set-background-color "#222222")))
+(add-hook 'evil-normal-state-exit-hook (lambda () (set-background-color "#111111")))
+(add-hook 'evil-insert-state-entry-hook (lambda () (set-background-color "#111111")))
+(add-hook 'evil-insert-state-exit-hook (lambda () (set-background-color "#222222")))
+(add-hook 'evil-visual-state-entry-hook (lambda () (set-background-color "#555555")))
+(add-hook 'evil-visual-state-exit-hook (lambda () (set-background-color "#222222")))
+(add-hook 'mmm-mode-hook
+          (lambda ()
+            (set-face-background 'mmm-default-submode-face nil)))
+(font-lock-add-keywords
+ 'python-mode
+ '(("\\<\\([a-zA-Z_]*\\) *(" 1 'font-lock-function-name-face prepend)))
 (global-auto-revert-mode t)
 (setq auto-revert-check-vc-info t)
 
@@ -38,6 +49,7 @@ values."
    '(
      javascript
      html
+     syntax-checking
      clojure
      yaml
      javascript
@@ -52,21 +64,46 @@ values."
      lsp
      ;; better-defaults
      emacs-lisp
+     web-mode
      git
      markdown
+     prettier
+     vue
+     rjsx
      ;; org
      ;; (shell :variables
      ;;        shell-default-height 30
      ;;        shell-default-position 'bottom)
      ;; spell-checking
-     syntax-checking
      ;; version-control
      )
    ;; List of additional packages that will be installed without being
    ;; wrapped in a layer. If you need some configuration for these
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
-   dotspacemacs-additional-packages '(hiwin vue-mode)
+   dotspacemacs-additional-packages '(
+                                      hiwin
+                                      (vue :path "~/.emacs.d/private/vue/")
+                                      ;; Multiple cursors
+                                      (use-package evil-mc
+                                        :ensure t
+                                        :config
+
+                                        (defun evil--mc-make-cursor-at-col (startcol _endcol orig-line)
+                                          (move-to-column startcol)
+                                          (unless (= (line-number-at-pos) orig-line)
+                                            (evil-mc-make-cursor-here)))
+                                        (defun evil-mc-make-vertical-cursors (beg end)
+                                          (interactive (list (region-beginning) (region-end)))
+                                          (evil-mc-pause-cursors)
+                                          (apply-on-rectangle #'evil--mc-make-cursor-at-col
+                                                              beg end (line-number-at-pos (point)))
+                                          (evil-mc-resume-cursors)
+                                          (evil-normal-state)
+                                          (move-to-column (evil-mc-column-number (if (> end beg)
+                                                                                     beg
+                                                                                   end)))))
+                                      )
    ;; A list of packages that cannot be updated.
    dotspacemacs-frozen-packages '()
    ;; A list of packages that will not be installed and loaded.
@@ -167,7 +204,7 @@ values."
    ;; quickly tweak the mode-line size to make separators look not too crappy.
    dotspacemacs-default-font '("Iosevka"
                               :size 18
-                              :weight regular
+                              :weight light
                               :width medium
                               :powerline-scale 1)
    ;; The leader key
@@ -342,11 +379,32 @@ layers configuration.
 This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
+  (setq neo-smart-open t)
+  (setq projectile-switch-project-action 'neotree-projectile-action)
+  (setq neo-autorefresh t)
+  (setq neo-vc-integration nil)
   (setq neo-theme (if (display-graphic-p) 'ascii 'ascii))
   (setq-default js2-basic-offset 2)
   (setq-default js-indent-level 2)
+  (spacemacs/add-flycheck-hook 'rjsx-mode)
+  (add-hook 'js-jsx-mode-hook 'flycheck-mode)
   (hiwin-activate)                           ;;
-  (set-face-background 'hiwin-face "gray23")
+  (set-face-background 'hiwin-face "#2a2a2a")
+  (set-face-foreground 'vertical-border "#222222")
+  (setq   web-mode-markup-indent-offset 2)
+  (setq  web-mode-css-indent-offset 2)
+  (setq    web-mode-code-indent-offset 2)
+  (setq    web-mode-attr-indent-offset 2)
+  (global-evil-mc-mode 1)
+  (setq evil-mc-cursor-color "#ffa500")
+;;  '(flycheck-error ((t (:background "color-208" :underline t))))
+;;  '(flycheck-warning ((t (:background "color-220" :underline t))))
+;;  '(region ((t (:background "color-45" :foreground "#2f2f2f"))))
+;;  '(window-divider ((t (:foreground "#222222"))))
+  (fset 'tupleify-line
+        [?A ?\' ?\C-\[ ?\[ ?3 ?~ escape ?I ?\' ?\C-\[ ?\[ ?3 ?~ escape ?V ?y ?p ?I ?\C-? ?, ?  escape ?I ?\( ?\C-\[ ?\[ ?3 ?~ escape ?A ?\) ?, escape ?\C-\[ ?O ?B ?^])
+  (evil-set-register ?t
+        [?A ?\' ?\C-\[ ?\[ ?3 ?~ escape ?I ?\' ?\C-\[ ?\[ ?3 ?~ escape ?V ?y ?p ?I ?\C-? ?, ?  escape ?I ?\( ?\C-\[ ?\[ ?3 ?~ escape ?A ?\) ?, escape ?\C-\[ ?O ?B ?^])
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -358,15 +416,19 @@ you should place your code here."
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("9564e04bc00e9836fd2debff16396b5f833ddcf1d47510bac17e3ead389f2982" "dd1b20a5498bc462f403bfaf949dc8cfcea298e292fd2df55f1daac3911409e2" "57dbf6abe667e06707e4dcf506cf719caa1698ff1bc2a2465c18ea412f9243a2" "f203cb308501e1edaaadc4f3f23043410f3cd7235ec6ce26b6cefca42be9133e" "8a6523c10fa8ca41a88944747e7a55c8a67e4d4f4ee35bedc9b79208f99e897a" "8e73901726ad7cf5de6a25b0799dd18a0d21decc014b3c40746daed313eac051" "f02bc7b2740270f70d8bdac1bb6fe08c10771c3b3eeb25480b44980628ce5f2c" "f676480e8ff5d22015dad97a1c9b5a05e1bad5e6a5b18dab8f8d9ef7468eda55" default)))
+    ("f36b5efa8458ee16e090710972aa80e22fbe8b151b4270af0cdda8c47cfc28be" "1dbcad433e37c7b4e587291e0317dd9e419c205fb21a61b93edd6584cff1061d" "f99f633514adc8e78c7d14b0f0a555677c5527636cd0700c6df99aeae0f65190" "df08696893d691ff8855d5ce7a0b07ae068586828281335656b7c48a010a4aa9" "dad7d1850439b61efd0cf457cfcf0077847aa98319ed972fd141e12396343d11" "2407c9e02fb3ae32262c024b26298216a826f10cfb73fcf09f605b0af8445a91" "7856ebb89502decccf1f242f2277b6a9025d2ad9818c2825287cf657ca45ec59" "6a15b109a09a3761a57d359f526f76fa0454107b4379c737340b126193b2870e" "980c5223f82e215620223e895602243958aaddb725cf1517c1e97fc6997545c7" "7e96fcf1e9e83e2971d44c7663dd36a2474279827f1f62242432de3f96d9a39d" "9564e04bc00e9836fd2debff16396b5f833ddcf1d47510bac17e3ead389f2982" "dd1b20a5498bc462f403bfaf949dc8cfcea298e292fd2df55f1daac3911409e2" "57dbf6abe667e06707e4dcf506cf719caa1698ff1bc2a2465c18ea412f9243a2" "f203cb308501e1edaaadc4f3f23043410f3cd7235ec6ce26b6cefca42be9133e" "8a6523c10fa8ca41a88944747e7a55c8a67e4d4f4ee35bedc9b79208f99e897a" "8e73901726ad7cf5de6a25b0799dd18a0d21decc014b3c40746daed313eac051" "f02bc7b2740270f70d8bdac1bb6fe08c10771c3b3eeb25480b44980628ce5f2c" "f676480e8ff5d22015dad97a1c9b5a05e1bad5e6a5b18dab8f8d9ef7468eda55" default)))
  '(evil-want-Y-yank-to-eol nil)
+ '(neo-window-position (quote right))
  '(package-selected-packages
    (quote
-    (hiwin auto-dim-other-buffers xclip flower lsp-treemacs lsp-ui yapfify yaml-mode ws-butler winum which-key web-mode web-beautify vue-mode volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spaceline spacegray-theme solarized-theme smeargle slim-mode scss-mode sass-mode rjsx-mode restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-bullets open-junk-file nova-theme neotree move-text monokai-theme minimal-theme markdown-toc magit-gitflow macrostep lsp-javascript-typescript lsp-javascript-flow lorem-ipsum livid-mode live-py-mode linum-relative link-hint light-soap-theme json-mode js2-refactor js-doc indent-guide hy-mode hungry-delete hl-todo highlight-parentheses highlight-numbers highlight-indentation helm-themes helm-swoop helm-pydoc helm-projectile helm-mode-manager helm-make helm-gitignore helm-flx helm-descbinds helm-css-scss helm-company helm-c-yasnippet grayscale-theme google-translate golden-ratio gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md fuzzy flycheck-pos-tip flx-ido flow-js2-mode fill-column-indicator farmhouse-theme fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu euslisp-mode emmet-mode elisp-slime-nav dumb-jump diminish define-word darkburn-theme cython-mode company-web company-tern company-statistics company-anaconda column-enforce-mode coffee-mode clojure-snippets clj-refactor clean-aindent-mode cider-eval-sexp-fu bubbleberry-theme auto-yasnippet auto-highlight-symbol auto-compile alect-themes aggressive-indent afternoon-theme adaptive-wrap ace-window ace-link ace-jump-helm-line ac-ispell))))
+    (pos-tip flycheck magithub hiwin auto-dim-other-buffers xclip flower lsp-treemacs lsp-ui yapfify yaml-mode ws-butler winum which-key web-mode web-beautify volatile-highlights vi-tilde-fringe uuidgen use-package toc-org tagedit spaceline spacegray-theme solarized-theme smeargle slim-mode scss-mode sass-mode rjsx-mode restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort pug-mode popwin pip-requirements persp-mode pcre2el paradox orgit org-bullets open-junk-file nova-theme neotree move-text monokai-theme minimal-theme markdown-toc magit-gitflow macrostep lsp-javascript-typescript lsp-javascript-flow lorem-ipsum livid-mode live-py-mode linum-relative link-hint light-soap-theme json-mode js2-refactor js-doc indent-guide hy-mode hungry-delete hl-todo highlight-parentheses highlight-numbers highlight-indentation helm-themes helm-swoop helm-pydoc helm-projectile helm-mode-manager helm-make helm-gitignore helm-flx helm-descbinds helm-css-scss helm-company helm-c-yasnippet grayscale-theme google-translate golden-ratio gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link gh-md fuzzy flycheck-pos-tip flx-ido flow-js2-mode fill-column-indicator farmhouse-theme fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-magit evil-lisp-state evil-indent-plus evil-iedit-state evil-exchange evil-escape evil-ediff evil-args evil-anzu euslisp-mode emmet-mode elisp-slime-nav dumb-jump diminish define-word darkburn-theme cython-mode company-web company-tern company-statistics company-anaconda column-enforce-mode coffee-mode clojure-snippets clj-refactor clean-aindent-mode cider-eval-sexp-fu bubbleberry-theme auto-yasnippet auto-highlight-symbol auto-compile alect-themes aggressive-indent afternoon-theme adaptive-wrap ace-window ace-link ace-jump-helm-line ac-ispell))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(flycheck-error ((t (:background "color-208" :underline t))))
- '(flycheck-warning ((t (:background "color-220" :underline t)))))
+ '(flycheck-info ((t (:background "#353b35" :underline t))))
+ '(flycheck-warning ((t (:background "#a9a700" :underline t))))
+ '(region ((t (:background "color-45" :foreground "#2f2f2f"))))
+ '(window-divider ((t (:foreground "#222222")))))
